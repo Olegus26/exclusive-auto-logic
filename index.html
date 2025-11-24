@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Проверка посредника и поле "Эксклюзив"</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f7;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin-bottom: 16px;
+    }
+
+    .container {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 16px 20px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+      flex: 1;
+    }
+
+    .card h2 {
+      font-size: 16px;
+      margin: 0 0 12px;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #d0d0d5;
+      box-sizing: border-box;
+    }
+
+    input[type="text"]:focus,
+    select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
+    }
+
+    .is-intermediary {
+      color: #d70000;
+      border-color: #d70000 !important;
+      box-shadow: 0 0 0 1px rgba(215, 0, 0, 0.2);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #eef2ff;
+      color: #3730a3;
+      margin-top: 4px;
+    }
+
+    .badge span.dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #22c55e;
+    }
+
+    .badge.badge-red {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .badge.badge-red span.dot {
+      background: #ef4444;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 7px 12px;
+      font-size: 13px;
+      border-radius: 6px;
+      border: 1px solid #d0d0d5;
+      background: #ffffff;
+      cursor: pointer;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      border-color: #2563eb;
+      background: #2563eb;
+      color: #ffffff;
+    }
+
+    .btn-danger {
+      border-color: #ef4444;
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+
+    th, td {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 6px 4px;
+      text-align: left;
+    }
+
+    th {
+      font-weight: 600;
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .table-empty {
+      font-size: 13px;
+      color: #9ca3af;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Карточка объекта: номер + эксклюзив / таблица посредников</h1>
+
+  <div class="container">
+    <!-- Левая часть: карточка объекта -->
+    <div class="card">
+      <h2>Карточка объекта</h2>
+
+      <div class="form-group">
+        <label for="phone">Номер телефона</label>
+        <input type="text" id="phone" placeholder="+380..." />
+        <div id="phoneStatus" class="badge">
+          <span class="dot"></span>
+          <span>Номер не посредника</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="exclusive">Эксклюзив</label>
+        <select id="exclusive"></select>
+      </div>
+
+
+    </div>
+
+    <!-- Правая часть: таблица посредников -->
+    <div class="card">
+      <h2>Таблица посредников</h2>
+
+      <div class="form-group" style="display:flex; gap:8px; align-items:flex-end;">
+        <div style="flex:1;">
+          <label for="newIntermediaryPhone">Добавить номер посредника</label>
+          <input
+            type="text"
+            id="newIntermediaryPhone"
+            placeholder="+380..."
+          />
+        </div>
+        <button class="btn btn-primary" id="addIntermediaryBtn">Добавить</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Номер посредника</th>
+            <th style="width:80px;">Действие</th>
+          </tr>
+        </thead>
+        <tbody id="intermediariesTableBody">
+          <!-- строки будут добавляться скриптом -->
+        </tbody>
+      </table>
+      <div id="emptyState" class="table-empty">Пока нет ни одного номера посредника.</div>
+    </div>
+  </div>
+
+  <script>
+    // Нормализация номера: убираем пробелы, скобки, дефисы.
+    function normalizePhone(value) {
+      if (!value) return "";
+      return value.replace(/[\s\-\(\)]/g, "").trim();
+    }
+
+    const phoneInput = document.getElementById("phone");
+    const exclusiveSelect = document.getElementById("exclusive");
+    const phoneStatus = document.getElementById("phoneStatus");
+
+    const newIntermediaryPhoneInput = document.getElementById("newIntermediaryPhone");
+    const addIntermediaryBtn = document.getElementById("addIntermediaryBtn");
+    const intermediariesTableBody = document.getElementById("intermediariesTableBody");
+    const emptyState = document.getElementById("emptyState");
+
+    // Храним список номеров посредников в памяти
+    let intermediaries = [
+      // Пример стартовых данных:
+      // "+380501112233",
+      // "+380671234567"
+    ];
+
+    function isIntermediary(phone) {
+      const normalized = normalizePhone(phone);
+      if (!normalized) return false;
+      return intermediaries.includes(normalized);
+    }
+
+    function setExclusiveOptions(options, defaultValue) {
+      exclusiveSelect.innerHTML = "";
+      options.forEach(opt => {
+        const option = document.createElement("option");
+        option.value = opt;
+        option.textContent = opt;
+        exclusiveSelect.appendChild(option);
+      });
+      if (defaultValue && options.includes(defaultValue)) {
+        exclusiveSelect.value = defaultValue;
+      } else if (options.length > 0) {
+        exclusiveSelect.value = options[0];
+      }
+    }
+
+    function updatePhoneStatusUI(isInter) {
+      if (isInter) {
+        phoneInput.classList.add("is-intermediary");
+        phoneStatus.classList.add("badge-red");
+        phoneStatus.querySelector("span:nth-child(2)").textContent = "Номер посредника";
+      } else {
+        phoneInput.classList.remove("is-intermediary");
+        phoneStatus.classList.remove("badge-red");
+        phoneStatus.querySelector("span:nth-child(2)").textContent = "Номер не посредника";
+      }
+    }
+
+    function updateExclusiveByPhone() {
+      const phone = phoneInput.value;
+      const inter = isIntermediary(phone);
+
+      if (inter) {
+        // Номер — посредник
+        updatePhoneStatusUI(true);
+        // Варианты: Посредник, Фото посредник
+        setExclusiveOptions(["Посредник", "Фото посредник"], "Посредник");
+      } else {
+        // Номер не посредник
+        updatePhoneStatusUI(false);
+        // Варианты: Нет, Фото, Эксклюзив
+        setExclusiveOptions(["Нет", "Фото", "Эксклюзив"], "Нет");
+      }
+    }
+
+    function renderIntermediariesTable() {
+      intermediariesTableBody.innerHTML = "";
+
+      if (intermediaries.length === 0) {
+        emptyState.style.display = "block";
+      } else {
+        emptyState.style.display = "none";
+      }
+
+      intermediaries.forEach(phone => {
+        const tr = document.createElement("tr");
+
+        const tdPhone = document.createElement("td");
+        tdPhone.textContent = phone;
+
+        const tdAction = document.createElement("td");
+        const btnRemove = document.createElement("button");
+        btnRemove.className = "btn btn-danger";
+        btnRemove.textContent = "Удалить";
+        btnRemove.addEventListener("click", () => {
+          intermediaries = intermediaries.filter(p => p !== phone);
+          renderIntermediariesTable();
+          // Пересчитать состояние для текущего номера
+          updateExclusiveByPhone();
+        });
+        tdAction.appendChild(btnRemove);
+
+        tr.appendChild(tdPhone);
+        tr.appendChild(tdAction);
+        intermediariesTableBody.appendChild(tr);
+      });
+    }
+
+    // Обработчики
+
+    // При вводе номера — сразу проверяем, посредник или нет
+    phoneInput.addEventListener("input", () => {
+      updateExclusiveByPhone();
+    });
+
+    // Добавление номера посредника
+    addIntermediaryBtn.addEventListener("click", () => {
+      const raw = newIntermediaryPhoneInput.value;
+      const normalized = normalizePhone(raw);
+
+      if (!normalized) {
+        alert("Введите номер посредника.");
+        return;
+      }
+
+      if (intermediaries.includes(normalized)) {
+        alert("Такой номер уже есть в списке посредников.");
+        return;
+      }
+
+      intermediaries.push(normalized);
+      newIntermediaryPhoneInput.value = "";
+      renderIntermediariesTable();
+      updateExclusiveByPhone();
+    });
+
+    // Позволяем нажимать Enter в поле добавления посредника
+    newIntermediaryPhoneInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addIntermediaryBtn.click();
+      }
+    });
+
+    // Инициализация
+    renderIntermediariesTable();
+    updateExclusiveByPhone(); // выставить стартовые варианты для эксклюзива
+  </script>
+</body>
+</html>
